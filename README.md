@@ -1,1 +1,43 @@
-[![Open in Visual Studio Code](https://classroom.github.com/assets/open-in-vscode-2e0aaae1b6195c2367325f4f02e2d04e9abb55f0b24a779b69b11b9e10269abc.svg)](https://classroom.github.com/online_ide?assignment_repo_id=20958521&assignment_repo_type=AssignmentRepo)
+# pdv
+Sistema de ERP web desenvolvido em Java com Spring Framework 
+
+# Recursos
+- Cadastro produtos/clientes/fornecedor
+- Controle de estoque
+- Gerenciar comandas
+- Realizar venda
+- Controle de fluxo de caixa
+- Controle de pagar e receber
+- Venda com cartões
+- Gerenciar permissões de usuários por grupos
+- Cadastrar novas formas de pagamentos
+- Relatórios
+
+# Instalação
+Para instalar o sistema, você deve criar o banco de dado "pdv" no mysql e configurar o arquivo application.properties
+com os dados do seu usuário root do mysql e rodar o projeto pelo Eclipse ou gerar o jar do mesmo e execultar.
+
+# Logando no sistema
+Para logar no sistema, use o usuário "gerente" e a senha "123".
+
+# Tecnologias utilizadas
+- Spring Framework 5
+- Thymeleaf 3
+- MySQL
+- Hibernate
+- FlyWay
+
+# Execução com Docker
+Para executar a aplicação utilizando o docker, utilize o seguinte comando na raiz do projeto:
+```sh
+docker compose up -d
+```
+
+# ENTREGA 1
+--> Documento do Plano de Teste: https://docs.google.com/document/d/1yJ1HbryH37ubZKkmaHUzn8jFX23Ox9zNgjQn83tilfg/edit?usp=sharing
+
+--> Documento de Testes Manuais: https://docs.google.com/document/d/1yudkPkBs9H3UMxCwu5Lg5rLogHO5h49KsCxGhzkSer0/edit?usp=sharing
+
+--> O teste manual realizado no Testlink está localizado dentro da pasta "artefatos" do projeto.
+
+--> Github anterior com histórico de commits: https://github.com/izabel-souza/pdv-qualidade-teste
