@@ -54,6 +54,82 @@ class NotaFiscalServiceTest {
         assertEquals(2, resultado.size()); //Retorna 2 notas fiscais (nf1 e nf2)
         assertEquals(listaEsperada, resultado); //A lista retornada deve ser igual à esperada
     }
+    
+    @Test
+    @DisplayName("Teste do método lista() com repositório vazio")
+    void retornaListaVaziaQuandoNaoHaNotasFiscais() {
+    	
+        // mock do NotaFiscalRepository
+        NotaFiscalRepository mockNFeRepo = mock(NotaFiscalRepository.class);
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService nfeService = new NotaFiscalService();
+
+        // injeta o mock no campo private notasFiscais
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockNFeRepo);
+
+        // define o comportamento do mock — repositório retorna lista vazia
+        when(mockNFeRepo.findAll()).thenReturn(List.of());
+
+        // chama o método lista() de NotaFiscalService
+        List<NotaFiscal> resultado = nfeService.lista();
+
+        // verifica se a lista está realmente vazia
+        assertNotNull(resultado); // deve existir, mesmo que vazia
+        assertTrue(resultado.isEmpty()); // lista sem notas
+    }
+
+    
+    @Test
+    @DisplayName("Teste do método lista() quando o repositório lança exceção")
+    void listaLancaExcecaoDoRepositorio() {
+
+        // mock do NotaFiscalRepository
+        NotaFiscalRepository mockNFeRepo = mock(NotaFiscalRepository.class);
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService nfeService = new NotaFiscalService();
+
+        // injeta o mock no campo private notasFiscais
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockNFeRepo);
+
+        // simula erro no repositório — quando chamar findAll(), lança RuntimeException
+        when(mockNFeRepo.findAll()).thenThrow(new RuntimeException("Falha ao acessar o banco"));
+
+        // executa o método dentro de um bloco try/catch para verificar se o erro ocorre
+        try {
+            nfeService.lista();
+            fail("Era esperado que uma exceção fosse lançada");
+        } catch (RuntimeException e) {
+            // valida que a mensagem de erro está de acordo com o simulado
+            assertEquals("Falha ao acessar o banco", e.getMessage());
+        }
+    }
+    
+    
+    @Test
+    @DisplayName("Teste do método lista() verifica chamada ao repositório")
+    void listaChamaFindAllUmaVez() {
+
+        // mock do NotaFiscalRepository
+        NotaFiscalRepository mockNFeRepo = mock(NotaFiscalRepository.class);
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService nfeService = new NotaFiscalService();
+
+        // injeta o mock no campo private notasFiscais
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockNFeRepo);
+
+        // comportamento padrão — retorna lista vazia
+        when(mockNFeRepo.findAll()).thenReturn(List.of());
+
+        // executa o método lista()
+        nfeService.lista();
+
+        // verifica se o método findAll() foi chamado exatamente uma vez
+        verify(mockNFeRepo, times(1)).findAll();
+    }
+
 
     
     @Test
@@ -77,6 +153,55 @@ class NotaFiscalServiceTest {
 
         assertEquals(5, total); //total de notas emitidas deve ser 5
     }
+    
+    
+    @Test
+    @DisplayName("Teste do método totalNotaFiscalEmitidas() quando não há notas emitidas")
+    void retornaZeroQuandoNaoHaNotasEmitidas() {
+        
+        // mock do NotaFiscalRepository
+        NotaFiscalRepository mockNFeRepo = mock(NotaFiscalRepository.class);
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService nfeService = new NotaFiscalService();
+
+        // injeta o mock no campo private notasFiscais
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockNFeRepo);
+
+        // comportamento do mock — nenhuma nota emitida
+        when(mockNFeRepo.totalNotaFiscalEmitidas()).thenReturn(0);
+
+        // chama o método totalNotaFiscalEmitidas() de NotaFiscalService
+        int total = nfeService.totalNotaFiscalEmitidas();
+
+        // verifica se o retorno é 0
+        assertEquals(0, total); // esperado: nenhum registro
+    }
+
+    
+    @Test
+    @DisplayName("Teste do método totalNotaFiscalEmitidas() verifica chamada ao repositório")
+    void totalNotaFiscalEmitidasChamaRepositorio() {
+        
+        // mock do NotaFiscalRepository
+        NotaFiscalRepository mockNFeRepo = mock(NotaFiscalRepository.class);
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService nfeService = new NotaFiscalService();
+
+        // injeta o mock no campo private notasFiscais
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockNFeRepo);
+
+        // comportamento do mock — retorna um valor qualquer
+        when(mockNFeRepo.totalNotaFiscalEmitidas()).thenReturn(8);
+
+        // executa o método
+        nfeService.totalNotaFiscalEmitidas();
+
+        // verifica se o método do repositório foi chamado uma vez
+        verify(mockNFeRepo, times(1)).totalNotaFiscalEmitidas();
+    }
+
     
 
     @Test
@@ -106,6 +231,80 @@ class NotaFiscalServiceTest {
         assertEquals(123L, resultado.get().getCodigo()); //verifica se o codigo retornado da nota é 123L
     }
     
+    @Test
+    @DisplayName("Teste do método busca(Long codnota) quando a nota não é encontrada")
+    void buscaNotaFiscalNaoEncontrada() {
+
+        // mock do NotaFiscalRepository
+        NotaFiscalRepository mockNFeRepo = mock(NotaFiscalRepository.class);
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService nfeService = new NotaFiscalService();
+
+        // injeta o mock no campo private notasFiscais
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockNFeRepo);
+
+        // comportamento do mock — retorna Optional vazio
+        when(mockNFeRepo.findById(999L)).thenReturn(Optional.empty());
+
+        // chama o método busca(Long codnota)
+        Optional<NotaFiscal> resultado = nfeService.busca(999L);
+
+        // verifica se a nota realmente não existe
+        assertFalse(resultado.isPresent()); // esperado: vazio (não encontrado)
+    }
+
+    
+    @Test
+    @DisplayName("Teste do método busca(Long codnota) com código nulo")
+    void buscaNotaFiscalComCodigoNulo() {
+
+        // mock do NotaFiscalRepository
+        NotaFiscalRepository mockNFeRepo = mock(NotaFiscalRepository.class);
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService nfeService = new NotaFiscalService();
+
+        // injeta o mock no campo private notasFiscais
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockNFeRepo);
+
+        // comportamento do mock — se receber null, retorna Optional vazio
+        when(mockNFeRepo.findById(null)).thenReturn(Optional.empty());
+
+        // executa com parâmetro nulo
+        Optional<NotaFiscal> resultado = nfeService.busca(null);
+
+        // o retorno deve ser vazio
+        assertTrue(resultado.isEmpty());
+    }
+
+    
+    @Test
+    @DisplayName("Teste do método busca(Long codnota) verifica chamada ao repositório")
+    void buscaChamaFindByIdUmaVez() {
+
+        // mock do NotaFiscalRepository
+        NotaFiscalRepository mockNFeRepo = mock(NotaFiscalRepository.class);
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService nfeService = new NotaFiscalService();
+
+        // injeta o mock no campo private notasFiscais
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockNFeRepo);
+
+        // comportamento padrão — retorna uma nota
+        NotaFiscal nf = new NotaFiscal();
+        nf.setCodigo(555L);
+        when(mockNFeRepo.findById(555L)).thenReturn(Optional.of(nf));
+
+        // chama o método busca(Long codnota)
+        nfeService.busca(555L);
+
+        // verifica se o repositório foi chamado exatamente uma vez
+        verify(mockNFeRepo, times(1)).findById(555L);
+    }
+
+    
     
     @Test
     @DisplayName("Teste do método geraDV(String codigo)")
@@ -119,6 +318,38 @@ class NotaFiscalServiceTest {
 
         assertTrue(dv >= 0 && dv <= 9); //retorna true porque dv é 0
     }
+    
+    
+    @Test
+    @DisplayName("Teste do método geraDV(String codigo) com string vazia")
+    void geraDVComStringVazia() {
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService service = new NotaFiscalService();
+
+        // executa com string vazia
+        int dv = service.geraDV("");
+
+        // retorna 0 porque o cálculo não é possível
+        assertEquals(0, dv);
+    }
+
+
+    @Test
+    @DisplayName("Teste do método geraDV(String codigo) com caracteres não numéricos")
+    void geraDVComCaracteresInvalidos() {
+
+        // objeto da classe NotaFiscalService
+        NotaFiscalService service = new NotaFiscalService();
+
+        // executa com código contendo letras
+        int dv = service.geraDV("12AB34");
+
+        // método não lança exceção — retorna um número entre 0 e 9
+        assertTrue(dv >= 0 && dv <= 9); // o retorno é 5 neste caso específico
+    }
+
+
     
     
     @Test
@@ -233,6 +464,110 @@ class NotaFiscalServiceTest {
 
         assertEquals("999", codigoGerado);
     }
+    
+    @Test
+    @DisplayName("Teste do método cadastrar() sem empresa cadastrada")
+    void cadastrarSemEmpresaCadastrada() {
+
+        // cria mocks necessários
+        NotaFiscalRepository mockRepo = mock(NotaFiscalRepository.class);
+        EmpresaService mockEmpresaService = mock(EmpresaService.class);
+        PessoaService mockPessoaService = mock(PessoaService.class);
+        NotaFiscalTotaisServer mockTotaisService = mock(NotaFiscalTotaisServer.class);
+
+        // cria o service e injeta os mocks
+        NotaFiscalService nfeService = new NotaFiscalService();
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockRepo);
+        ReflectionTestUtils.setField(nfeService, "empresas", mockEmpresaService);
+        ReflectionTestUtils.setField(nfeService, "pessoas", mockPessoaService);
+        ReflectionTestUtils.setField(nfeService, "notaTotais", mockTotaisService);
+
+        // comportamento dos mocks — sem empresa cadastrada
+        when(mockEmpresaService.verificaEmpresaCadastrada()).thenReturn(Optional.empty());
+
+        // execução e verificação de exceção
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            nfeService.cadastrar(10L, "Venda", NotaFiscalTipo.SAIDA);
+        });
+
+        assertEquals("Nenhuma empresa cadastrada, verifique", exception.getMessage());
+    }
+    
+    @Test
+    @DisplayName("Teste do método cadastrar() sem destinatário informado")
+    void cadastrarSemPessoaCadastrada() {
+
+        // cria mocks necessários
+        NotaFiscalRepository mockRepo = mock(NotaFiscalRepository.class);
+        EmpresaService mockEmpresaService = mock(EmpresaService.class);
+        PessoaService mockPessoaService = mock(PessoaService.class);
+        NotaFiscalTotaisServer mockTotaisService = mock(NotaFiscalTotaisServer.class);
+
+        // cria o service e injeta os mocks
+        NotaFiscalService nfeService = new NotaFiscalService();
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockRepo);
+        ReflectionTestUtils.setField(nfeService, "empresas", mockEmpresaService);
+        ReflectionTestUtils.setField(nfeService, "pessoas", mockPessoaService);
+        ReflectionTestUtils.setField(nfeService, "notaTotais", mockTotaisService);
+
+        // prepara empresa válida
+        EmpresaParametro parametro = new EmpresaParametro();
+        parametro.setSerie_nfe(1);
+        parametro.setAmbiente(1);
+        Empresa empresa = new Empresa();
+        empresa.setParametro(parametro);
+
+        // comportamento dos mocks — empresa presente, pessoa ausente
+        when(mockEmpresaService.verificaEmpresaCadastrada()).thenReturn(Optional.of(empresa));
+        when(mockPessoaService.buscaPessoa(10L)).thenReturn(Optional.empty());
+
+        // execução e verificação da exceção
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            nfeService.cadastrar(10L, "Venda de produtos", NotaFiscalTipo.SAIDA);
+        });
+
+        assertEquals("Favor, selecione o destinatário", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("Teste do método cadastrar() com série da empresa igual a zero")
+    void cadastrarComSerieZerada() {
+
+        // cria mocks necessários
+        NotaFiscalRepository mockRepo = mock(NotaFiscalRepository.class);
+        EmpresaService mockEmpresaService = mock(EmpresaService.class);
+        PessoaService mockPessoaService = mock(PessoaService.class);
+        NotaFiscalTotaisServer mockTotaisService = mock(NotaFiscalTotaisServer.class);
+
+        // cria o service e injeta os mocks
+        NotaFiscalService nfeService = new NotaFiscalService();
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockRepo);
+        ReflectionTestUtils.setField(nfeService, "empresas", mockEmpresaService);
+        ReflectionTestUtils.setField(nfeService, "pessoas", mockPessoaService);
+        ReflectionTestUtils.setField(nfeService, "notaTotais", mockTotaisService);
+
+        // prepara empresa com série inválida (0)
+        EmpresaParametro parametro = new EmpresaParametro();
+        parametro.setSerie_nfe(0); // série zerada
+        parametro.setAmbiente(1);
+        Empresa empresa = new Empresa();
+        empresa.setParametro(parametro);
+
+        // pessoa válida
+        Pessoa pessoa = new Pessoa();
+
+        // comportamento dos mocks
+        when(mockEmpresaService.verificaEmpresaCadastrada()).thenReturn(Optional.of(empresa));
+        when(mockPessoaService.buscaPessoa(10L)).thenReturn(Optional.of(pessoa));
+
+        // execução e verificação da exceção
+        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
+            nfeService.cadastrar(10L, "Venda teste", NotaFiscalTipo.SAIDA);
+        });
+
+        assertEquals("Não existe série cadastrada para o modelo 55, verifique", exception.getMessage());
+    }
+
 
 
 }
