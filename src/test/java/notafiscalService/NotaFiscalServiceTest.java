@@ -348,6 +348,18 @@ class NotaFiscalServiceTest {
         // método não lança exceção — retorna um número entre 0 e 9
         assertTrue(dv >= 0 && dv <= 9); // o retorno é 5 neste caso específico
     }
+    
+    @Test
+    @DisplayName("Teste do método geraDV() com código longo")
+    void geraDVComCodigoLongo() {
+        NotaFiscalService service = new NotaFiscalService();
+
+        String codigo = "12345678901234567890";
+        int dv = service.geraDV(codigo);
+
+        assertTrue(dv >= 0 && dv <= 9);
+    }
+
 
 
     
@@ -380,6 +392,44 @@ class NotaFiscalServiceTest {
             fail("Erro inesperado ao salvar XML: " + e.getMessage());
         }
     }
+    
+    
+    @Test
+    @DisplayName("Teste do método salvaXML() com XML vazio")
+    void salvaXMLComConteudoVazio() {
+        NotaFiscalService service = new NotaFiscalService();
+        String chave = "xmlVazio123";
+
+        try {
+            service.salvaXML("", chave); // XML vazio
+            File file = new File(new File(".").getCanonicalPath() + "/src/main/resources/xmlNfe/" + chave + ".xml");
+
+            assertTrue(file.exists()); // arquivo deve existir mesmo vazio
+            assertEquals(0, file.length()); // tamanho 0 bytes (vazio)
+
+            file.delete();
+        } catch (Exception e) {
+            fail("Não deveria lançar exceção: " + e.getMessage());
+        }
+    }
+    
+    @Test
+    @DisplayName("Teste do método salvaXML() com erro ao salvar arquivo")
+    void salvaXMLComErroDeGravacao() {
+        NotaFiscalService service = new NotaFiscalService();
+
+        // chave com nome inválido para o sistema operacional
+        String chave = "invalido/<>:?*";
+
+        Exception exception = assertThrows(Exception.class, () -> {
+            service.salvaXML("<nfe>erro</nfe>", chave);
+        });
+
+        // só valida que deu erro, independentemente da mensagem exata
+        assertNotNull(exception.getMessage());
+    }
+
+
 
 
     
@@ -416,6 +466,18 @@ class NotaFiscalServiceTest {
             fail("Erro inesperado ao remover XML: " + e.getMessage());
         }
     }
+    
+    @Test
+    @DisplayName("Teste do método removeXml() quando arquivo não existe")
+    void removeXmlArquivoInexistente() {
+        NotaFiscalService service = new NotaFiscalService();
+
+        // chave de um arquivo que nunca foi criado
+        String chave = "nao_existe_999";
+
+        assertDoesNotThrow(() -> service.removeXml(chave));
+    }
+
 
     
     
@@ -566,6 +628,83 @@ class NotaFiscalServiceTest {
         });
 
         assertEquals("Não existe série cadastrada para o modelo 55, verifique", exception.getMessage());
+    }
+    
+    @Test
+    @DisplayName("Teste do método cadastrar() com tipo ENTRADA")
+    void cadastrarNotaFiscalEntrada() {
+        NotaFiscalRepository mockRepo = mock(NotaFiscalRepository.class);
+        EmpresaService mockEmpresaService = mock(EmpresaService.class);
+        PessoaService mockPessoaService = mock(PessoaService.class);
+        NotaFiscalTotaisServer mockTotaisService = mock(NotaFiscalTotaisServer.class);
+
+        NotaFiscalService nfeService = new NotaFiscalService();
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockRepo);
+        ReflectionTestUtils.setField(nfeService, "empresas", mockEmpresaService);
+        ReflectionTestUtils.setField(nfeService, "pessoas", mockPessoaService);
+        ReflectionTestUtils.setField(nfeService, "notaTotais", mockTotaisService);
+
+        EmpresaParametro parametro = new EmpresaParametro();
+        parametro.setSerie_nfe(1);
+        parametro.setAmbiente(1);
+
+        Empresa empresa = new Empresa();
+        empresa.setParametro(parametro);
+
+        Pessoa pessoa = new Pessoa();
+
+        NotaFiscalTotais totais = new NotaFiscalTotais(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+
+        NotaFiscal nfSalva = new NotaFiscal();
+        nfSalva.setCodigo(111L);
+
+        when(mockEmpresaService.verificaEmpresaCadastrada()).thenReturn(Optional.of(empresa));
+        when(mockPessoaService.buscaPessoa(1L)).thenReturn(Optional.of(pessoa));
+        when(mockTotaisService.cadastro(any(NotaFiscalTotais.class))).thenReturn(totais);
+        when(mockRepo.buscaUltimaNota(1)).thenReturn(50L);
+        when(mockRepo.save(any(NotaFiscal.class))).thenReturn(nfSalva);
+
+        String codigoGerado = nfeService.cadastrar(1L, "Entrada de mercadorias", NotaFiscalTipo.ENTRADA);
+
+        assertEquals("111", codigoGerado);
+    }
+
+    @Test
+    @DisplayName("Teste do método cadastrar() com natureza nula")
+    void cadastrarComNaturezaNula() {
+        NotaFiscalRepository mockRepo = mock(NotaFiscalRepository.class);
+        EmpresaService mockEmpresaService = mock(EmpresaService.class);
+        PessoaService mockPessoaService = mock(PessoaService.class);
+        NotaFiscalTotaisServer mockTotaisService = mock(NotaFiscalTotaisServer.class);
+
+        NotaFiscalService nfeService = new NotaFiscalService();
+        ReflectionTestUtils.setField(nfeService, "notasFiscais", mockRepo);
+        ReflectionTestUtils.setField(nfeService, "empresas", mockEmpresaService);
+        ReflectionTestUtils.setField(nfeService, "pessoas", mockPessoaService);
+        ReflectionTestUtils.setField(nfeService, "notaTotais", mockTotaisService);
+
+        EmpresaParametro parametro = new EmpresaParametro();
+        parametro.setSerie_nfe(1);
+        parametro.setAmbiente(1);
+
+        Empresa empresa = new Empresa();
+        empresa.setParametro(parametro);
+
+        Pessoa pessoa = new Pessoa();
+
+        NotaFiscalTotais totais = new NotaFiscalTotais();
+        NotaFiscal nfSalva = new NotaFiscal();
+        nfSalva.setCodigo(777L);
+
+        when(mockEmpresaService.verificaEmpresaCadastrada()).thenReturn(Optional.of(empresa));
+        when(mockPessoaService.buscaPessoa(1L)).thenReturn(Optional.of(pessoa));
+        when(mockTotaisService.cadastro(any(NotaFiscalTotais.class))).thenReturn(totais);
+        when(mockRepo.buscaUltimaNota(1)).thenReturn(70L);
+        when(mockRepo.save(any(NotaFiscal.class))).thenReturn(nfSalva);
+
+        String codigoGerado = nfeService.cadastrar(1L, null, NotaFiscalTipo.SAIDA);
+
+        assertEquals("777", codigoGerado);
     }
 
 
