@@ -147,22 +147,6 @@
       <version>1.14.18</version>
       <scope>test</scope>
     </dependency>
-    
-    <!-- Validação com Bean Validation (necessário para @NotBlank, @Size, @CNPJ etc) -->
-	<dependency>
-	  <groupId>org.hibernate.validator</groupId>
-	  <artifactId>hibernate-validator</artifactId>
-	  <version>6.2.5.Final</version>
-	</dependency>
-	
-	<!-- Dependência do Jakarta Bean Validation API (antigo javax.validation) -->
-	<dependency>
-	  <groupId>jakarta.validation</groupId>
-	  <artifactId>jakarta.validation-api</artifactId>
-	  <version>2.0.2</version>
-	</dependency>
-
-    
   </dependencies>
 
   <build>
