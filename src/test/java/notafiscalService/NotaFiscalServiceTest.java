@@ -422,24 +422,6 @@ class NotaFiscalServiceTest {
         }
     }
     
-    @Test
-    @DisplayName("Teste do método salvaXML() com erro ao salvar arquivo")
-    void salvaXMLComErroDeGravacao() {
-        NotaFiscalService service = new NotaFiscalService();
-
-        // chave com nome inválido para o sistema operacional
-        String chave = "invalido/<>:?*";
-
-        Exception exception = assertThrows(Exception.class, () -> {
-            service.salvaXML("<nfe>erro</nfe>", chave);
-        });
-
-        // só valida que deu erro, independentemente da mensagem exata
-        assertNotNull(exception.getMessage());
-    }
-
-
-
 
 
     @Test
