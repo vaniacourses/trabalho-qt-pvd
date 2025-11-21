@@ -2,8 +2,6 @@ package notafiscalService;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.sql.Date;
-import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -30,14 +28,9 @@ import static org.mockito.Mockito.when;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import net.originmobi.pdv.enumerado.notafiscal.NotaFiscalTipo;
-import net.originmobi.pdv.model.Cidade;
 import net.originmobi.pdv.model.Empresa;
 import net.originmobi.pdv.model.EmpresaParametro;
-import net.originmobi.pdv.model.Endereco;
-import net.originmobi.pdv.model.Estado;
-import net.originmobi.pdv.model.FreteTipo;
 import net.originmobi.pdv.model.NotaFiscal;
-import net.originmobi.pdv.model.NotaFiscalFinalidade;
 import net.originmobi.pdv.model.NotaFiscalTotais;
 import net.originmobi.pdv.model.Pessoa;
 import net.originmobi.pdv.repository.notafiscal.NotaFiscalRepository;
@@ -46,6 +39,9 @@ import net.originmobi.pdv.service.PessoaService;
 import net.originmobi.pdv.service.notafiscal.NotaFiscalService;
 import net.originmobi.pdv.service.notafiscal.NotaFiscalTotaisServer;
 import net.originmobi.pdv.xml.nfe.GeraXmlNfe;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 class NotaFiscalServiceTest {
 	
@@ -328,69 +324,28 @@ class NotaFiscalServiceTest {
 
 
 
-  //TESTES DO MÉTODO geraDV(codigo)
+    //TESTES DO MÉTODO geraDV(codigo)
     
-    @Test
-    @DisplayName("Teste do método geraDV(codigo)")
-    void geraDVCorretamente() {
-
-        //objeto da classe NotaFiscalService
+    @ParameterizedTest
+    @DisplayName("Teste parametrizado do cálculo do Dígito Verificador (DV)")
+    @CsvSource({
+        "1234567890, 0",             // Caso: geraDVCorretamente
+        "'', 0",                     // Caso: geraDVComStringVazia (aspas simples para string vazia)
+        "12AB34, 5",                 // Caso: geraDVComCaracteresInvalidos
+        "12345678901234567890, 0",   // Caso: geraDVComCodigoLongo (aproveitando para incluir)
+        "4321, 4",                   // Caso: geraDVComValorConhecidoDiferente
+        "6, 0"                       // Caso: geraDVRestoIgualAUm
+    })
+    void calculaDV(String codigo, int resultadoEsperado) {
+        // Cenario
         NotaFiscalService service = new NotaFiscalService();
 
-        //gera nota fiscal com código "1234567890"
-        int dv = service.geraDV("1234567890");
-
-        assertEquals(0, dv);
-    }
-
-    @Test
-    @DisplayName("Teste do método geraDV(codigo) com string vazia")
-    void geraDVComStringVazia() {
-
-        // objeto da classe NotaFiscalService
-        NotaFiscalService service = new NotaFiscalService();
-
-        // executa com string vazia
-        int dv = service.geraDV("");
-
-        // retorna 0 porque o cálculo não é possível
-        assertEquals(0, dv);
-    }
-
-    @Test
-    @DisplayName("Teste do método geraDV(codigo) com caracteres não numéricos")
-    void geraDVComCaracteresInvalidos() {
-
-        // objeto da classe NotaFiscalService
-        NotaFiscalService service = new NotaFiscalService();
-
-        // executa com código contendo letras
-        int dv = service.geraDV("12AB34");
-
-        assertEquals(5, dv);
-    }
-    
-    @Test
-    @DisplayName("Teste do método geraDV(codigo) com código longo")
-    void geraDVComCodigoLongo() {
-        NotaFiscalService service = new NotaFiscalService();
-
-        String codigo = "12345678901234567890";
+        // Execução
         int dv = service.geraDV(codigo);
 
-        assertEquals(0, dv);
-    }
-
-    @Test
-    @DisplayName("Teste do método geraDV(codigo) com valor conhecido 2")
-    void geraDVComValorConhecidoDiferente() {
-
-        NotaFiscalService service = new NotaFiscalService();
-        
-        String codigo = "4321";
-        int dv = service.geraDV(codigo);
-
-        assertEquals(4, dv);
+        // Verificação
+        assertEquals(resultadoEsperado, dv, 
+            () -> "Falha ao calcular DV para o código: " + codigo);
     }
 
 
@@ -759,7 +714,7 @@ class NotaFiscalServiceTest {
 
         Pessoa pessoa = new Pessoa();
 
-        NotaFiscalTotais totais = new NotaFiscalTotais();
+        NotaFiscalTotais totais = new NotaFiscalTotais(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
         NotaFiscal nfSalva = new NotaFiscal();
         nfSalva.setCodigo(777L);
 
@@ -839,7 +794,7 @@ class NotaFiscalServiceTest {
         Empresa empresa = new Empresa();
         empresa.setParametro(parametro);
         Pessoa pessoa = new Pessoa();
-        NotaFiscalTotais totais = new NotaFiscalTotais();
+        NotaFiscalTotais totais = new NotaFiscalTotais(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
         // --- COMPORTAMENTO (when) ---
         when(mockEmpresaService.verificaEmpresaCadastrada()).thenReturn(Optional.of(empresa));
@@ -877,10 +832,9 @@ class NotaFiscalServiceTest {
     void geraDVComCodigoNulo() {
         NotaFiscalService service = new NotaFiscalService();
         
-        // Passar null causa NullPointerException, que é pego pelo catch(Exception e)
         int dv = service.geraDV(null);
         
-        // O bloco catch retorna 0
+        //bloco catch retorna 0
         assertEquals(0, dv);
     }
     
