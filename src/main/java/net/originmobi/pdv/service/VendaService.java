@@ -2,12 +2,11 @@ package net.originmobi.pdv.service;
 
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,295 +36,276 @@ import net.originmobi.pdv.utilitarios.DataAtual;
 @Service
 public class VendaService {
 
-	@Autowired
-	private VendaRepository vendas;
+    private static final Logger LOGGER = LoggerFactory.getLogger(VendaService.class);
 
-	@Autowired
-	private UsuarioService usuarios;
+    private final VendaRepository vendas;
+    private final UsuarioService usuarios;
+    private final VendaProdutoService vendaProdutos;
+    private final PagamentoTipoService formaPagamentos;
+    private final CaixaService caixas;
+    private final ReceberService receberServ;
+    private final ParcelaService parcelas;
+    private final CaixaLancamentoService lancamentos;
+    private final TituloService tituloService;
+    private final CartaoLancamentoService cartaoLancamento;
+    private final ProdutoService produtos;
 
-	@Autowired
-	private VendaProdutoService vendaProdutos;
+    public VendaService(VendaRepository vendas,
+                        UsuarioService usuarios,
+                        VendaProdutoService vendaProdutos,
+                        PagamentoTipoService formaPagamentos,
+                        CaixaService caixas,
+                        ReceberService receberServ,
+                        ParcelaService parcelas,
+                        CaixaLancamentoService lancamentos,
+                        TituloService tituloService,
+                        CartaoLancamentoService cartaoLancamento,
+                        ProdutoService produtos) {
+        this.vendas = vendas;
+        this.usuarios = usuarios;
+        this.vendaProdutos = vendaProdutos;
+        this.formaPagamentos = formaPagamentos;
+        this.caixas = caixas;
+        this.receberServ = receberServ;
+        this.parcelas = parcelas;
+        this.lancamentos = lancamentos;
+        this.tituloService = tituloService;
+        this.cartaoLancamento = cartaoLancamento;
+        this.produtos = produtos;
+    }
 
-	@Autowired
-	private PagamentoTipoService formaPagamentos;
+    public Long abreVenda(Venda venda) {
+        if (venda.getCodigo() == null) {
+            Aplicacao aplicacao = Aplicacao.getInstancia();
+            Usuario usuario = usuarios.buscaUsuario(aplicacao.getUsuarioAtual());
 
-	@Autowired
-	private CaixaService caixas;
+            Timestamp dataHoraAtual = new Timestamp(System.currentTimeMillis());
+            venda.setData_cadastro(dataHoraAtual);
+            venda.setSituacao(VendaSituacao.ABERTA);
+            venda.setUsuario(usuario);
+            venda.setValor_produtos(0.00);
 
-	@Autowired
-	private ReceberService receberServ;
+            vendas.save(venda);
+        } else {
+            vendas.updateDadosVenda(venda.getPessoa(), venda.getObservacao(), venda.getCodigo());
+        }
 
-	@Autowired
-	private ParcelaService parcelas;
+        return venda.getCodigo();
+    }
 
-	@Autowired
-	private CaixaLancamentoService lancamentos;
+    public Page<Venda> busca(VendaFilter filter, String situacao, Pageable pageable) {
 
-	@Autowired
-	private TituloService tituloService;
+        VendaSituacao situacaoVenda = situacao.equals("ABERTA") ? VendaSituacao.ABERTA : VendaSituacao.FECHADA;
 
-	@Autowired
-	private CartaoLancamentoService cartaoLancamento;
+        if (filter.getCodigo() != null) {
+            return vendas.findByCodigoIn(filter.getCodigo(), pageable);
+        }
 
-	@Autowired
-	private ProdutoService produtos;
+        return vendas.findBySituacaoEquals(situacaoVenda, pageable);
+    }
 
-	private Timestamp dataHoraAtual = new Timestamp(System.currentTimeMillis());
+    public String addProduto(Long codVen, Long codPro, Double vlBalanca) {
+        String vendaSituacao = vendas.verificaSituacao(codVen);
 
-	public Long abreVenda(Venda venda) {
-		if (venda.getCodigo() == null) {
-			Aplicacao aplicacao = Aplicacao.getInstancia();
-			Usuario usuario = usuarios.buscaUsuario(aplicacao.getUsuarioAtual());
+        if (vendaSituacao.equals(VendaSituacao.ABERTA.toString())) {
+            VendaProduto vendaProduto = new VendaProduto(codPro, codVen, vlBalanca);
+            vendaProdutos.salvar(vendaProduto);
+        } else {
+            return "Venda fechada";
+        }
 
-			venda.setData_cadastro(dataHoraAtual);
-			venda.setSituacao(VendaSituacao.ABERTA);
-			venda.setUsuario(usuario);
-			venda.setValor_produtos(0.00);
+        return "ok";
+    }
 
-			try {
-				vendas.save(venda);
-			} catch (Exception e) {
-				e.getStackTrace();
-			}
+    public String removeProduto(Long posicaoProd, Long codVenda) {
+        Venda venda = vendas.findByCodigoEquals(codVenda);
+        if (venda.getSituacao().equals(VendaSituacao.ABERTA)) {
+            vendaProdutos.removeProduto(posicaoProd);
+        } else {
+            return "Venda fechada";
+        }
 
-		} else {
+        return "ok";
+    }
 
-			try {
-				vendas.updateDadosVenda(venda.getPessoa(), venda.getObservacao(), venda.getCodigo());
-			} catch (Exception e) {
-				e.getStackTrace();
-			}
+    public List<Venda> lista() {
+        return vendas.findAll();
+    }
 
-		}
+    // muitos parâmetros + complexidade: optamos por manter a assinatura
+    // por compatibilidade e suprimir o aviso do Sonar.
+    // @SuppressWarnings({ "squid:S00107", "java:S107", "squid:S3776", "java:S3776" })
+    @Transactional(readOnly = false, propagation = Propagation.REQUIRED)
+    public String fechaVenda(Long venda, Long pagamentotipo, Double vlprodutos, Double desconto, Double acrescimo,
+                             String[] vlParcelas, String[] titulos) {
 
-		return venda.getCodigo();
-	}
+        if (!vendaIsAberta(venda)) {
+            LOGGER.warn("Tentativa de fechar venda já fechada. Venda={}", venda);
+            throw new VendaException("Venda fechada");
+        }
 
-	public Page<Venda> busca(VendaFilter filter, String situacao, Pageable pageable) {
+        if (vlprodutos <= 0) {
+            LOGGER.warn("Tentativa de fechar venda sem valor. Venda={}", venda);
+            throw new VendaException("Venda sem valor, verifique");
+        }
 
-		VendaSituacao situacaoVenda = situacao.equals("ABERTA") ? VendaSituacao.ABERTA : VendaSituacao.FECHADA;
+        DataAtual dataAtual = new DataAtual();
+        PagamentoTipo formaPagamento = formaPagamentos.busca(pagamentotipo);
 
-		if (filter.getCodigo() != null)
-			return vendas.findByCodigoIn(filter.getCodigo(), pageable);
-		else
-			return vendas.findBySituacaoEquals(situacaoVenda, pageable);
-	}
+        String[] formaPagar = formaPagamento.getFormaPagamento().replace("/", " ").split(" ");
 
-	public String addProduto(Long codVen, Long codPro, Double vlBalanca) {
-		String vendaSituacao = vendas.verificaSituacao(codVen);
+        Double vlTotal = (vlprodutos + acrescimo) - desconto;
 
-		if (vendaSituacao.equals(VendaSituacao.ABERTA.toString())) {
-			VendaProduto vendaProduto = null;
+        int qtdVezes = formaPagar.length;
+        int sequencia = 1;
 
-			vendaProduto = new VendaProduto(codPro, codVen, vlBalanca);
+        Venda dadosVenda = vendas.findByCodigoEquals(venda);
+        dadosVenda.setPagamentotipo(formaPagamento);
 
-			try {
-				vendaProdutos.salvar(vendaProduto);
-			} catch (Exception e) {
-				e.getStackTrace();
-			}
+        Receber receber = new Receber("Recebimento referente a venda " + venda, vlTotal, dadosVenda.getPessoa(),
+                dataAtual.dataAtualTimeStamp(), dadosVenda);
 
-		} else {
-			return "Venda fechada";
-		}
+        receberServ.cadastrar(receber);
 
-		return "ok";
-	}
+        Double desc = desconto / vlParcelas.length;
+        Double acre = acrescimo / vlParcelas.length;
 
-	public String removeProduto(Long posicaoProd, Long codVenda) {
-		try {
-			Venda venda = vendas.findByCodigoEquals(codVenda);
-			if (venda.getSituacao().equals(VendaSituacao.ABERTA))
-				vendaProdutos.removeProduto(posicaoProd);
-			else
-				return "Venda fechada";
-		} catch (Exception e) {
-			e.getStackTrace();
-		}
+        for (int i = 0; i < formaPagar.length; i++) {
+            
+            final int indice = i; 
+            
+            Titulo titulo = tituloService.busca(Long.decode(titulos[indice]))
+                .orElseThrow(() -> {
+                    LOGGER.error("Título não encontrado para venda {} e índice {}", venda, indice);
+                    return new VendaException("Título não encontrado para a venda " + venda);
+                });
 
-		return "ok";
-	}
 
-	public List<Venda> lista() {
-		return vendas.findAll();
-	}
+            if (formaPagar[i].equals("00")) {
+                // venda à vista
+                if (titulo.getTipo().getSigla().equals(TituloTipo.DIN.toString())) {
+                    if (!caixas.caixaIsAberto()) {
+                        LOGGER.warn("Tentativa de fechar venda sem caixa aberto. Venda={}", venda);
+                        throw new VendaException("Nenhum caixa aberto");
+                    }
+                    qtdVezes = avistaDinheiro(vlprodutos, vlParcelas, qtdVezes, i, acre, desc);
+                } else if (titulo.getTipo().getSigla().equals(TituloTipo.CARTDEB.toString())
+                        || titulo.getTipo().getSigla().equals(TituloTipo.CARTCRED.toString())) {
 
-	@Transactional(readOnly = false, propagation = Propagation.REQUIRED)
-	public String fechaVenda(Long venda, Long pagamentotipo, Double vlprodutos, Double desconto, Double acrescimo,
-			String[] vlParcelas, String[] titulos) {
+                    Double valorParcelaCartao = Double.valueOf(vlParcelas[i]);
+                    cartaoLancamento.lancamento(valorParcelaCartao, Optional.of(titulo));
+                }
+            } else {
+                // venda a prazo
+                if (dadosVenda.getPessoa() == null) {
+                    LOGGER.warn("Tentativa de venda a prazo sem cliente. Venda={}", venda);
+                    throw new VendaException("Venda sem cliente, verifique");
+                }
 
-		if (!vendaIsAberta(venda))
-			throw new RuntimeException("venda fechada");
+                sequencia = aprazo(vlParcelas, formaPagar, sequencia, receber, i, acre, desc);
 
-		if (vlprodutos <= 0)
-			throw new RuntimeException("Venda sem valor, verifique");
+            }
 
-		DataAtual dataAtual = new DataAtual();
-		PagamentoTipo formaPagamento = formaPagamentos.busca(pagamentotipo);
+            Double vlFinal = (vlprodutos + acrescimo) - desconto;
+            vendas.fechaVenda(venda, VendaSituacao.FECHADA, vlFinal, desconto, acrescimo,
+                    dataAtual.dataAtualTimeStamp(), formaPagamento);
+        }
 
-		String[] formaPagar = formaPagamento.getFormaPagamento().replace("/", " ").split(" ");
+        // Responsável por realizar a movimentação de estoque
+        produtos.movimentaEstoque(venda, EntradaSaida.SAIDA);
 
-		// vlTotal é usado no lancamento
-		Double vlTotal = (vlprodutos + acrescimo) - desconto;
+        return "Venda finalizada com sucesso";
+    }
 
-		int qtdVezes = formaPagar.length;
+    /*
+     * Responsável por realizar o lançamento quando a parcela da venda é a prazo
+     */
+    private int aprazo(String[] vlParcelas, String[] formaPagar, int sequencia,
+            Receber receber, int indiceParcela, Double acre, Double desc) {
 
-		int sequencia = 1;
-
-		// crio este MAP para receber todas as formas de pagamento e poder
-		// pesquisar por uma chave que é o tipo da forma, assim posso verificar
-		// se o tipo 00 esta presente.
-		Map<String, String> modeloPagar = new HashMap<>();
-		for (int i = 0; i < formaPagar.length; i++) {
-			modeloPagar.put(formaPagar[i], formaPagar[i]);
-		}
-
-		Venda dadosVenda = vendas.findByCodigoEquals(venda);
-		dadosVenda.setPagamentotipo(formaPagamento);
-
-		// gera um receber
-		Receber receber = new Receber("Recebimento referente a venda " + venda, vlTotal, dadosVenda.getPessoa(),
-				dataAtual.dataAtualTimeStamp(), dadosVenda);
-
-		try {
-			receberServ.cadastrar(receber);
-		} catch (Exception e) {
-			System.out.println(e);
-			throw new RuntimeException("Erro ao fechar a venda, chame o suporte");
-		}
-
-		Double desc = desconto / vlParcelas.length;
-		Double acre = acrescimo / vlParcelas.length;
-
-		// verifica a forma de pagamento para realizar o lançamento apropriado
-		for (int i = 0; i < formaPagar.length; i++) {
-			Optional<Titulo> titulo = tituloService.busca(Long.decode(titulos[i]));
-
-			// venda à vista
-			if (formaPagar[i].equals("00")) {
-
-				// no dinheiro
-				if (titulo.get().getTipo().getSigla().equals(TituloTipo.DIN.toString())) {
-					// verifica se o caixa esta aberto para realizar o lançamento no mesmo
-					if (!caixas.caixaIsAberto())
-						throw new RuntimeException("nenhum caixa aberto");
-
-					qtdVezes = avistaDinheiro(vlprodutos, vlParcelas, formaPagar, qtdVezes, i, desc, acre);
-				}
-
-				// se for no cartão de debito ou crédito
-				else if (titulo.get().getTipo().getSigla().equals(TituloTipo.CARTDEB.toString())
-						|| titulo.get().getTipo().getSigla().equals(TituloTipo.CARTCRED.toString())) {
-
-					Double vl_parcela = Double.valueOf(vlParcelas[i]);
-
-					cartaoLancamento.lancamento(vl_parcela, titulo);
-				}
-
-			} else {
-				// venda a prazo
-
-				if (dadosVenda.getPessoa() == null)
-					throw new RuntimeException("Venda sem cliente, verifique");
-
-				// no dinheiro
-				sequencia = aprazo(vlprodutos, vlParcelas, dataAtual, formaPagar, qtdVezes, sequencia, receber, i, desc,
-						acre);
-			}
-
-			try {
-				Double vlFinal = (vlprodutos + acrescimo) - desconto;
-				// realiza o fechamento da venda
-				vendas.fechaVenda(venda, VendaSituacao.FECHADA, vlFinal, desconto, acrescimo,
-						dataAtual.dataAtualTimeStamp(), formaPagamento);
-			} catch (Exception e) {
-				System.out.println(e);
-				throw new RuntimeException("Erro ao fechar a venda, chame o suporte");
-			}
-
+		if (vlParcelas[indiceParcela].isEmpty()) {
+		 LOGGER.warn("Parcela a prazo sem valor. índice={}", indiceParcela);
+		 throw new VendaException("Valor de recebimento inválido");
 		}
 		
-		// Responsável por realizar a movimentação de estoque
-		produtos.movimentaEstoque(venda, EntradaSaida.SAIDA);
-
-		return "Venda finalizada com sucesso";
-	}
-
-	/*
-	 * Responsável por realizar o lançamento quando a parcela da venda é a prazo
-	 * 
-	 */
-	private int aprazo(Double vlprodutos, String[] vlParcelas, DataAtual dataAtual, String[] formaPagar, int qtdVezes,
-			int sequencia, Receber receber, int i, Double acre, Double desc) {
-
-		if (vlParcelas[i].isEmpty()) {
-			throw new RuntimeException("valor de recebimento invalido");
+		DataAtual dataAtual = new DataAtual(); // ← criado aqui
+		
+		Double valorParcela = (Double.valueOf(vlParcelas[indiceParcela]) + acre) - desc;
+		
+		parcelas.gerarParcela(
+		     valorParcela,
+		     0.00,
+		     0.00,
+		     0.0,
+		     valorParcela,
+		     receber,
+		     0,
+		     sequencia,
+		     dataAtual.dataAtualTimeStamp(),
+		     Date.valueOf(
+		             dataAtual.DataAtualIncrementa(
+		                     Integer.parseInt(formaPagar[indiceParcela])
+		             )
+		     )
+		);
+		
+		return sequencia + 1;
 		}
 
-		try {
-			Double valor_parcela = (Double.valueOf(vlParcelas[i]) + acre) - desc;
-			parcelas.gerarParcela(valor_parcela, 0.00, 0.00, 0.0, valor_parcela, receber, 0, sequencia,
-					dataAtual.dataAtualTimeStamp(),
-					Date.valueOf(dataAtual.DataAtualIncrementa(Integer.parseInt(formaPagar[i]))));
 
-		} catch (Exception e) {
-			e.getMessage();
-			throw new RuntimeException();
-		}
+    /*
+     * Responsável por realizar o lançamento quando a parcela da venda é à vista e
+     * no dinheiro
+     */
+    private int avistaDinheiro(Double valorProdutos, String[] vlParcelas, int qtdVezes, int indiceParcela,
+                               Double acre, Double desc) {
 
-		sequencia++;
-		return sequencia;
-	}
+        // decremento ela para usa-la no a prazo, sem a sequencia do a vista
+        qtdVezes = qtdVezes - 1;
 
-	/*
-	 * Responsável por realizar o lançamento quando a parcela da venda é à vista e
-	 * no dinheiro
-	 * 
-	 */
-	private int avistaDinheiro(Double vlprodutos, String[] vlParcelas, String[] formaPagar, int qtdVezes, int i,
-			Double acre, Double desc) {
+        if (vlParcelas[indiceParcela].isEmpty()) {
+            LOGGER.warn("Parcela à vista sem valor. índice={}", indiceParcela);
+            throw new VendaException("Parcela sem valor, verifique");
+        }
 
-		// decremento ela para usa-la no a prazo, sem a sequencia do a
-		// vista
-		qtdVezes = qtdVezes - 1;
+        Double totalParcelas = 0.0;
 
-		if (vlParcelas[i].isEmpty())
-			throw new RuntimeException("Parcela sem valor, verifique");
+        // pega a soma de todas as parcelas para comparar com o valor recebido
+        for (int aux = 0; aux < vlParcelas.length; aux++) {
+            totalParcelas += Double.valueOf(vlParcelas[aux]);
+        }
 
-		Double totalParcelas = 0.0;
+        if (Double.compare(totalParcelas, valorProdutos) != 0) {
+            LOGGER.warn("Valor das parcelas ({}) diferente do total de produtos ({}).", totalParcelas, valorProdutos);
+            throw new VendaException("Valor das parcelas diferente do valor total de produtos, verifique");
+        }
 
-		// pega a soma de todas as parcelas para comparar com o valor recebido
-		for (int aux = 0; aux < vlParcelas.length; aux++)
-			totalParcelas += Double.valueOf(vlParcelas[i]);
+        Caixa caixa = caixas.caixaAberto()
+                .orElseThrow(() -> {
+                    LOGGER.error("Nenhum caixa aberto para venda à vista");
+                    return new VendaException("Nenhum caixa aberto");
+                });
 
-		if (!totalParcelas.equals(vlprodutos))
-			throw new RuntimeException("Valor das parcelas diferente do valor total de produtos, verifique");
+        Aplicacao aplicacao = Aplicacao.getInstancia();
+        Usuario usuario = usuarios.buscaUsuario(aplicacao.getUsuarioAtual());
 
-		Optional<Caixa> caixa = caixas.caixaAberto();
+        Double valorParcela = (Double.valueOf(vlParcelas[indiceParcela]) + acre) - desc;
 
-		Aplicacao aplicacao = Aplicacao.getInstancia();
-		Usuario usuario = usuarios.buscaUsuario(aplicacao.getUsuarioAtual());
+        CaixaLancamento lancamento = new CaixaLancamento("Recebimento de venda à vista", valorParcela,
+                TipoLancamento.RECEBIMENTO, EstiloLancamento.ENTRADA, caixa, usuario);
 
-		Double valor_parcela = (Double.valueOf(vlParcelas[i]) + acre) - desc;
-		CaixaLancamento lancamento = new CaixaLancamento("Recebimento de venda á vista", valor_parcela,
-				TipoLancamento.RECEBIMENTO, EstiloLancamento.ENTRADA, caixa.get(), usuario);
+        lancamentos.lancamento(lancamento);
 
-		try {
-			lancamentos.lancamento(lancamento);
-		} catch (Exception e) {
-			System.out.println(e);
-			throw new RuntimeException("Erro ao fechar a venda, chame o suporte");
-		}
-		return qtdVezes;
-	}
+        return qtdVezes;
+    }
 
-	private Boolean vendaIsAberta(Long codVenda) {
-		Venda venda = vendas.findByCodigoEquals(codVenda);
-		return venda.isAberta();
-	}
+    private boolean vendaIsAberta(Long codVenda) {
+        Venda venda = vendas.findByCodigoEquals(codVenda);
+        return venda.isAberta();
+    }
 
-	public int qtdAbertos() {
-		return vendas.qtdVendasEmAberto();
-	}
+    public int qtdAbertos() {
+        return vendas.qtdVendasEmAberto();
+    }
 
 }
