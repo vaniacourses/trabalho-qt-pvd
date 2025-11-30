@@ -1,0 +1,338 @@
+{
+	"info": {
+		"_postman_id": "6075deb8-af6a-4cd7-8e4d-3b4cbdfaeef4",
+		"name": "Pokemon-QT-2",
+		"description": "### Welcome to Postman! This is your first collection.\n\nCollections are your starting point for building and testing APIs. You can use this one to:\n\n• Group related requests  \n• Test your API in real-world scenarios  \n• Document and share your requests\n\nUpdate the name and overview whenever you’re ready to make it yours.\n\n[Learn more about Postman Collections.](https://learning.postman.com/docs/collections/collections-overview/)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "50110717",
+		"_collection_link": "https://izabelsouza-1795ec54-5808372.postman.co/workspace/Izabel-Cristina-de-Souza-Soares~937c9a52-966d-40a6-8348-1931add5ab42/collection/48889619-6075deb8-af6a-4cd7-8e4d-3b4cbdfaeef4?action=share&source=collection_link&creator=50110717"
+	},
+	"item": [
+		{
+			"name": "Type - water",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Tipo retornado é 'water'\", () => {\r",
+							"    pm.expect(pm.response.json().name).to.eql(\"water\");\r",
+							"});\r",
+							"\r",
+							"//Teste para verificar se os campos existem na resposta da API \r",
+							"pm.test(\"Estrutura básica do tipo está presente\", () => { \r",
+							"    const body = pm.response.json(); \r",
+							"    pm.expect(body).to.have.property(\"id\"); \r",
+							"    pm.expect(body).to.have.property(\"name\"); \r",
+							"    pm.expect(body).to.have.property(\"damage_relations\"); \r",
+							"    pm.expect(body).to.have.property(\"pokemon\"); \r",
+							"    pm.expect(body).to.have.property(\"moves\"); \r",
+							"});\r",
+							"\r",
+							"//Teste para verificar os tipos de pokemons que causam dano em pokemon tipo agua -> eletrico e grama \r",
+							"pm.test(\"Water tem fraquezas corretas\", () => { \r",
+							"    const damage = pm.response.json().damage_relations; \r",
+							"    const fraquezas = damage.double_damage_from.map(t => t.name); \r",
+							"    pm.expect(fraquezas).to.include(\"electric\"); \r",
+							"    pm.expect(fraquezas).to.include(\"grass\"); \r",
+							"});\r",
+							"\r",
+							"//Teste para verificar os tipos de pokemons que agua se sobresai -> fogo, terra e pedra \r",
+							"pm.test(\"Water é super efetivo contra fire/ground/rock\", () => { \r",
+							"    const damage = pm.response.json().damage_relations; const efetivo = damage.double_damage_to.map(t => t.name); pm.expect(efetivo).to.include(\"fire\"); \r",
+							"    pm.expect(efetivo).to.include(\"ground\"); \r",
+							"    pm.expect(efetivo).to.include(\"rock\"); \r",
+							"});\r",
+							"\r",
+							"//Teste para verificar se 'squirtle' e 'psyduck' fazem parte da lista de pokemons retornados \r",
+							"pm.test(\"Pokémon famosos de água estão listados\", () => { \r",
+							"    const nomes = pm.response.json().pokemon.map(p => p.pokemon.name); \r",
+							"    pm.expect(nomes).to.include(\"squirtle\"); \r",
+							"    pm.expect(nomes).to.include(\"psyduck\"); \r",
+							"});\r",
+							"\r",
+							"//Teste para verificar se há golpes do tipo water cadastrados \r",
+							"pm.test(\"Water possui golpes associados\", () => { \r",
+							"    const moves = pm.response.json().moves; \r",
+							"    pm.expect(moves.length).to.be.above(0); \r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://pokeapi.co/api/v2/type/water",
+					"protocol": "https",
+					"host": [
+						"pokeapi",
+						"co"
+					],
+					"path": [
+						"api",
+						"v2",
+						"type",
+						"water"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Ability – overgrow",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Teste status code\r",
+							"pm.test(\"Status code = 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"\r",
+							"// Teste response tem JSON\r",
+							"pm.test(\"Resposta em JSON\", function () {\r",
+							"    const contentType = pm.response.headers.get(\"Content-Type\");\r",
+							"    pm.expect(contentType).to.contain(\"application/json\");\r",
+							"});\r",
+							"\r",
+							"\r",
+							"// Teste ability com nome correto\r",
+							"pm.test(\"Ability tem o nome 'overgrow'\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"    pm.expect(body).to.have.property(\"name\", \"overgrow\");\r",
+							"});\r",
+							"\r",
+							"\r",
+							"// Teste ability está associada a pelo menos 1 Pokémon\r",
+							"pm.test(\"Ability está associada a pelo menos um Pokémon\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"    pm.expect(body.pokemon.length).to.be.above(0);\r",
+							"});\r",
+							"\r",
+							"\r",
+							"// Teste ability é da série principal\r",
+							"pm.test(\"Ability é da série principal\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"    pm.expect(body).to.have.property(\"is_main_series\", true);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://pokeapi.co/api/v2/ability/overgrow",
+					"protocol": "https",
+					"host": [
+						"pokeapi",
+						"co"
+					],
+					"path": [
+						"api",
+						"v2",
+						"ability",
+						"overgrow"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Nature – bold",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Teste status code\r",
+							"pm.test(\"Status code é 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"// Teste resposta vem em JSON\r",
+							"pm.test(\"Resposta vem em JSON\", function () {\r",
+							"    pm.response.to.be.withBody;\r",
+							"\r",
+							"    const contentType = pm.response.headers.get(\"Content-Type\");\r",
+							"    pm.expect(contentType).to.contain(\"application/json\");\r",
+							"});\r",
+							"\r",
+							"// Teste nature tem o nome 'bold'\r",
+							"pm.test(\"Nature tem o nome 'bold'\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"    pm.expect(body).to.have.property(\"name\", \"bold\");\r",
+							"});\r",
+							"\r",
+							"// Teste nature aumenta defesa e reduz ataque\r",
+							"pm.test(\"Nature 'bold' aumenta defesa e reduz ataque\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"\r",
+							"    pm.expect(body).to.have.property(\"increased_stat\");\r",
+							"    pm.expect(body.increased_stat.name).to.eql(\"defense\");\r",
+							"\r",
+							"    pm.expect(body).to.have.property(\"decreased_stat\");\r",
+							"    pm.expect(body.decreased_stat.name).to.eql(\"attack\");\r",
+							"});\r",
+							"\r",
+							"// Teste nature gosta de sabor 'sour' e odeia 'spicy'\r",
+							"pm.test(\"Nature 'bold' gosta de 'sour' e odeia 'spicy'\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"\r",
+							"    pm.expect(body).to.have.property(\"likes_flavor\");\r",
+							"    pm.expect(body.likes_flavor.name).to.eql(\"sour\");\r",
+							"\r",
+							"    pm.expect(body).to.have.property(\"hates_flavor\");\r",
+							"    pm.expect(body.hates_flavor.name).to.eql(\"spicy\");\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://pokeapi.co/api/v2/nature/bold",
+					"protocol": "https",
+					"host": [
+						"pokeapi",
+						"co"
+					],
+					"path": [
+						"api",
+						"v2",
+						"nature",
+						"bold"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Pokémon – bulbasaur",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"//Status code 200\r",
+							"pm.test(\"Status code é 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"//Resposta vem em JSON\r",
+							"pm.test(\"Resposta vem em JSON\", function () {\r",
+							"    pm.response.to.be.withBody;\r",
+							"    const contentType = pm.response.headers.get(\"Content-Type\");\r",
+							"    pm.expect(contentType).to.contain(\"application/json\");\r",
+							"});\r",
+							"\r",
+							"//Pokémon tem o nome 'bulbasaur'\r",
+							"pm.test(\"Pokémon tem nome 'bulbasaur'\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"    pm.expect(body).to.have.property(\"name\", \"bulbasaur\");\r",
+							"});\r",
+							"\r",
+							"//Pokémon é do tipo 'grass' e 'poison'\r",
+							"pm.test(\"Bulbasaur é do tipo 'grass' e 'poison'\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"\r",
+							"    const typeNames = body.types.map(t => t.type.name);\r",
+							"\r",
+							"    pm.expect(typeNames).to.include(\"grass\");\r",
+							"    pm.expect(typeNames).to.include(\"poison\");\r",
+							"});\r",
+							"\r",
+							"// Pokémon possui pelo menos um movimento\r",
+							"pm.test(\"Bulbasaur possui pelo menos um movimento\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"\r",
+							"    pm.expect(body).to.have.property(\"moves\");\r",
+							"    pm.expect(body.moves.length).to.be.above(0);\r",
+							"});\r",
+							"\r",
+							"// ID do Bulbasaur é 1\r",
+							"pm.test(\"ID do Bulbasaur é 1\", function () {\r",
+							"    const body = pm.response.json();\r",
+							"    pm.expect(body).to.have.property(\"id\", 1);\r",
+							"});\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "https://pokeapi.co/api/v2/pokemon/bulbasaur",
+					"protocol": "https",
+					"host": [
+						"pokeapi",
+						"co"
+					],
+					"path": [
+						"api",
+						"v2",
+						"pokemon",
+						"bulbasaur"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
