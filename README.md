@@ -41,3 +41,6 @@ docker compose up -d
 --> O teste manual realizado no Testlink está localizado dentro da pasta "artefatos" do projeto.
 
 --> Github anterior com histórico de commits: https://github.com/izabel-souza/pdv-qualidade-teste
+
+# ENTREGA 2
+--> API dos testes com Postman: https://pokeapi.co/docs/v2
