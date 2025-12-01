@@ -1,0 +1,5 @@
+/app/src/test/java/notafiscalService/NotaFiscalServiceTest.java
+/app/src/test/java/vendaService/VendaServiceTest.java
+/app/src/test/java/net/originmobi/pdv/PdvApplicationTests.java
+/app/src/test/java/ajusteService/AjusteServiceTest.java
+/app/src/test/java/caixaService/CaixaServiceTest.java
