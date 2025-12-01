@@ -6,11 +6,11 @@ import java.sql.Date;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,13 +33,17 @@ import net.originmobi.pdv.service.UsuarioService;
 @DisplayName("CaixaService — testes unitarios")
 class CaixaServiceTest {
 
-  @InjectMocks
   private CaixaService caixaService;
 
   @Mock private CaixaRepository caixas;
   @Mock private UsuarioService usuarios;
   @Mock private CaixaLancamentoService lancamentos;
   
+  @BeforeEach
+  void setup() {
+    caixaService = new CaixaService(caixas, usuarios, lancamentos);
+  }
+
   @Test
   @DisplayName("cadastro(): se tipo=CAIXA e já houver caixa aberto deve retornar 'Existe caixa de dias anteriores em aberto, favor verifique'")
   void cadastro_quandoCaixaJaAberto_RetornaErro() {
