@@ -37,10 +37,10 @@ public class AjusteServiceTest {
 
     @BeforeEach
     void setup() {
-		// Instancia a classe AjusteService
-        ajusteService = new AjusteService(); 
+		// Instancia a classe AjusteService 
         ajusteRepositoryMock = mock(AjusteRepository.class);
         produtoServiceMock = mock(ProdutoService.class);
+		ajusteService = new AjusteService(ajusteRepositoryMock, produtoServiceMock);
 
         // Insere os mocks na classe a ser testada
         ReflectionTestUtils.setField(ajusteService, "ajustes", ajusteRepositoryMock);
